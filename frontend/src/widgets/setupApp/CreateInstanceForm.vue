@@ -17,6 +17,7 @@ import {
 import type { FormInstance } from "ant-design-vue";
 import { message, Modal, type UploadProps } from "ant-design-vue";
 import type { Rule } from "ant-design-vue/es/form";
+import _ from "lodash";
 import { computed, createVNode, onUnmounted, reactive, ref } from "vue";
 import DockerImageSelect from "../instance/dialogs/components/DockerImageSelect.vue";
 import SelectUnzipCode from "../instance/dialogs/SelectUnzipCode.vue";
@@ -24,14 +25,31 @@ import SelectUnzipCode from "../instance/dialogs/SelectUnzipCode.vue";
 const selectUnzipCodeDialog = ref<InstanceType<typeof SelectUnzipCode>>();
 const emit = defineEmits(["nextStep"]);
 
+type InstancePresetConfig = Partial<
+  Omit<
+    IGlobalInstanceConfig,
+    "docker" | "eventTask" | "terminalOption" | "pingConfig" | "extraServiceConfig" | "java"
+  >
+> & {
+  docker?: Partial<IGlobalInstanceDockerConfig>;
+  eventTask?: Partial<IGlobalInstanceConfig["eventTask"]>;
+  terminalOption?: Partial<IGlobalInstanceConfig["terminalOption"]>;
+  pingConfig?: Partial<IGlobalInstanceConfig["pingConfig"]>;
+  extraServiceConfig?: Partial<IGlobalInstanceConfig["extraServiceConfig"]>;
+  java?: Partial<IInstanceJavaConfig>;
+};
+
 const props = defineProps<{
   createMethod: QUICKSTART_METHOD;
   daemonId: string;
+  presetConfig?: InstancePresetConfig;
 }>();
 
 const zipCode = ref("utf-8");
 const formRef = ref<FormInstance>();
-const formData = reactive<IGlobalInstanceConfig>(defaultInstanceInfo);
+const formData = reactive<IGlobalInstanceConfig>(
+  _.merge(_.cloneDeep(defaultInstanceInfo), props.presetConfig || {})
+);
 
 const isImportMode = props.createMethod === QUICKSTART_METHOD.IMPORT;
 const isFileMode = props.createMethod === QUICKSTART_METHOD.FILE;

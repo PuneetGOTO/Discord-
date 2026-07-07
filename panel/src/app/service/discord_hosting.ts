@@ -127,7 +127,7 @@ const OFFICIAL_SOURCES: DiscordHostingSourceTemplate[] = [
 
 const DEFAULT_SETTINGS: DiscordHostingSettings = {
   enabled: true,
-  requireManualReview: true,
+  requireManualReview: false,
   requireEgressGateway: true,
   platformFuseInvalidRequestsPer10m: 7000,
   discordInvalidRequestsPer10m: 10000,
@@ -262,10 +262,10 @@ function saveState(state: DiscordHostingState): DiscordHostingState {
 function getMetrics(settings: DiscordHostingSettings): DiscordHostingMetric[] {
   return [
     {
-      label: t("METRIC_POLICY_GATE"),
-      value: settings.requireManualReview ? t("VALUE_MANUAL_REVIEW") : t("VALUE_AUTO_ALLOW"),
-      status: settings.requireManualReview ? "processing" : "warning",
-      detail: t("METRIC_POLICY_GATE_DETAIL")
+      label: t("METRIC_CREATE_MODE"),
+      value: t("VALUE_ADMIN_DIRECT_CREATE"),
+      status: "success",
+      detail: t("METRIC_CREATE_MODE_DETAIL")
     },
     {
       label: t("METRIC_INVALID_REQUEST_FUSE"),
@@ -283,10 +283,10 @@ function getMetrics(settings: DiscordHostingSettings): DiscordHostingMetric[] {
       detail: t("METRIC_REST_CEILING_DETAIL")
     },
     {
-      label: t("METRIC_EGRESS_MODE"),
-      value: settings.requireEgressGateway ? t("VALUE_GATEWAY_REQUIRED") : t("VALUE_DIRECT_ALLOWED"),
+      label: t("METRIC_RUNTIME_ACTION"),
+      value: settings.isolateRiskyBots ? t("VALUE_AUTO_QUARANTINE") : t("VALUE_OPERATOR_ALERT"),
       status: settings.requireEgressGateway ? "success" : "error",
-      detail: t("METRIC_EGRESS_MODE_DETAIL")
+      detail: t("METRIC_RUNTIME_ACTION_DETAIL")
     }
   ];
 }
@@ -408,13 +408,12 @@ export function getDiscordHostingOverview(): DiscordHostingOverview {
     features: getFeatures(),
     guardrails: getGuardrails(),
     deploymentGates: [
-      t("GATE_APPLICATION_ID"),
-      t("GATE_NO_ABUSE_BEHAVIOR"),
-      t("GATE_TOKEN_VAULT"),
-      t("GATE_PRIVILEGED_INTENTS"),
-      t("GATE_EGRESS"),
-      t("GATE_REST_BUDGET"),
-      t("GATE_RUNTIME_LIMITS")
+      t("MONITOR_REST_BURST"),
+      t("MONITOR_MESSAGE_BURST"),
+      t("MONITOR_INVALID_REQUESTS"),
+      t("MONITOR_GATEWAY_RECONNECT"),
+      t("MONITOR_TOKEN_LEAK"),
+      t("MONITOR_AUTO_SUSPEND")
     ],
     bannedBehaviors: [...BANNED_BEHAVIORS],
     sources: getOfficialSources(),
