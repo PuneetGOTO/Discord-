@@ -82,6 +82,48 @@ This is the primary deployment path for this fork. It builds the current
 MCSManager release, so the Discord Bot Hosting page and the Node.js/Python bot
 presets are included.
 
+#### One-click installer
+
+The one-click script can install either the main platform or a remote node. It
+installs Node.js, Docker Engine, project dependencies, Daemon helper binaries,
+production files, systemd services and basic firewall rules when UFW is already
+active.
+
+Interactive mode:
+
+```bash
+curl -fsSL https://github.com/PuneetGOTO/Discord-/raw/refs/heads/codex/discord-hosting-platform/setup-ubuntu.sh | sudo bash
+```
+
+Install the main platform directly:
+
+```bash
+curl -fsSL https://github.com/PuneetGOTO/Discord-/raw/refs/heads/codex/discord-hosting-platform/setup-ubuntu.sh | sudo bash -s -- --main
+```
+
+Install a remote node directly:
+
+```bash
+curl -fsSL https://github.com/PuneetGOTO/Discord-/raw/refs/heads/codex/discord-hosting-platform/setup-ubuntu.sh | sudo bash -s -- --node
+```
+
+You can also clone the repository and run the script locally:
+
+```bash
+git clone -b codex/discord-hosting-platform https://github.com/PuneetGOTO/Discord-.git
+cd Discord-
+sudo bash setup-ubuntu.sh
+```
+
+The default installation path is `/opt/discord-mcsm`. Override it when needed:
+
+```bash
+curl -fsSL https://github.com/PuneetGOTO/Discord-/raw/refs/heads/codex/discord-hosting-platform/setup-ubuntu.sh | sudo INSTALL_DIR=/data/discord-mcsm bash -s -- --main
+```
+
+The manual deployment steps below are kept for operators who want to audit or
+customize every command.
+
 #### 1. Install base packages and Node.js
 
 Use Node.js 20 LTS for the most predictable build/runtime behavior with this
