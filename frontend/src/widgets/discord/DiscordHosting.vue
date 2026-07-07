@@ -2,7 +2,6 @@
 import { openNodeSelectDialog } from "@/components/fc";
 import BetweenMenus from "@/components/BetweenMenus.vue";
 import { router } from "@/config/router";
-import { TYPE_UNIVERSAL } from "@/hooks/useInstance";
 import { QUICKSTART_METHOD } from "@/hooks/widgets/quickStartFlow";
 import { t } from "@/lang/i18n";
 import {
@@ -54,7 +53,7 @@ const createForm = ref({
 
 const discordPresetConfig: InstancePresetConfig = {
   nickname: "discord-bot",
-  type: TYPE_UNIVERSAL,
+  type: "universal",
   processType: "docker",
   cwd: ".",
   startCommand: "npm install --omit=dev && npm start",
