@@ -75,6 +75,244 @@ Chinese: https://docs.mcsmanager.com/zh_cn/
 
 ## Installation
 
+### Ubuntu 22.04/24.04 (recommended for this Discord hosting fork)
+
+This is the primary deployment path for this fork. It builds the current
+`PuneetGOTO/Discord-` source branch instead of downloading the upstream
+MCSManager release, so the Discord Bot Hosting page and the Node.js/Python bot
+presets are included.
+
+#### 1. Install base packages and Node.js
+
+Use Node.js 20 LTS for the most predictable build/runtime behavior with this
+project.
+
+```bash
+sudo apt update
+sudo apt install -y ca-certificates curl git wget tar xz-utils build-essential
+
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+node -v
+npm -v
+```
+
+#### 2. Install Docker Engine
+
+Discord bot instances are created as Docker containers, so Docker must be
+available to the Daemon host.
+
+```bash
+# Optional cleanup if unofficial Docker packages were installed before.
+sudo apt remove -y docker.io docker-compose docker-compose-v2 docker-doc podman-docker containerd runc || true
+
+# Add Docker's official apt repository.
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+sudo tee /etc/apt/sources.list.d/docker.sources > /dev/null <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+sudo docker run --rm hello-world
+```
+
+If you plan to run MCSManager as a non-root service user, add that user to the
+`docker` group and log in again. For a simple single-server deployment, running
+the Daemon service as root is the least surprising option because it can access
+`/var/run/docker.sock` directly.
+
+#### 3. Download this fork and build production files
+
+```bash
+sudo mkdir -p /opt/discord-mcsm
+sudo chown -R "$USER":"$USER" /opt/discord-mcsm
+cd /opt/discord-mcsm
+
+git clone -b codex/discord-hosting-platform https://github.com/PuneetGOTO/Discord-.git .
+
+chmod +x install-dependents.sh build.sh
+./install-dependents.sh
+./build.sh
+```
+
+The build output will be written to:
+
+```text
+/opt/discord-mcsm/production-code/
+```
+
+#### 4. Add Linux Daemon binary dependencies
+
+The Daemon needs the PTY and Zip helper binaries for terminal and file
+management features. The commands below are for Ubuntu x64. On ARM servers,
+replace `x64` with `arm64`.
+
+```bash
+mkdir -p /opt/discord-mcsm/production-code/daemon/lib
+cd /opt/discord-mcsm/production-code/daemon/lib
+
+wget -O pty_linux_x64 https://github.com/MCSManager/PTY/releases/download/latest/pty_linux_x64
+wget -O file_zip_linux_x64 https://github.com/MCSManager/Zip-Tools/releases/download/latest/file_zip_linux_x64
+wget -O 7z_linux_x64 https://github.com/MCSManager/Zip-Tools/releases/download/latest/7z_linux_x64
+
+chmod +x pty_linux_x64 file_zip_linux_x64 7z_linux_x64
+```
+
+#### 5. Create systemd services
+
+Create the Daemon service:
+
+```bash
+sudo tee /etc/systemd/system/discord-mcsm-daemon.service > /dev/null <<'EOF'
+[Unit]
+Description=Discord MCSManager Daemon
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/discord-mcsm/production-code/daemon
+Environment=NODE_ENV=production
+Environment=MCSM_DOCKER_WORKSPACE_PATH=/opt/discord-mcsm/production-code/daemon/data/InstanceData
+ExecStart=/usr/bin/node --max-old-space-size=8192 app.js
+Restart=always
+RestartSec=5
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+Create the Web panel service:
+
+```bash
+sudo tee /etc/systemd/system/discord-mcsm-web.service > /dev/null <<'EOF'
+[Unit]
+Description=Discord MCSManager Web Panel
+After=network-online.target discord-mcsm-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/discord-mcsm/production-code/web
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node --max-old-space-size=8192 app.js
+Restart=always
+RestartSec=5
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+Enable and start both services:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now discord-mcsm-daemon discord-mcsm-web
+
+sudo systemctl status discord-mcsm-daemon --no-pager
+sudo systemctl status discord-mcsm-web --no-pager
+```
+
+#### 6. Open the panel
+
+Open the Web panel in your browser:
+
+```text
+http://<your-server-ip>:23333/
+```
+
+For a single-machine deployment, keep the Daemon bound to the same server and
+avoid exposing port `24444` to the public internet. If you use `ufw`, a minimal
+single-server setup is:
+
+```bash
+sudo ufw allow OpenSSH
+sudo ufw allow 23333/tcp
+sudo ufw enable
+```
+
+Only open `24444/tcp` to trusted panel IPs when you intentionally run remote
+Daemon nodes.
+
+#### 7. Create Discord bot servers
+
+After logging in as an administrator:
+
+1. Open `Discord Hosting`.
+2. Select a node.
+3. Choose `Create Node.js container` or `Create Python container`.
+4. Upload or create the bot project.
+5. Store the bot token as the `DISCORD_TOKEN` environment variable. Do not put
+   the token in source files or uploaded archives.
+
+The Node.js preset expects a project with `package.json` and `npm start`. The
+Python preset expects `requirements.txt` and `bot.py`, and starts with:
+
+```bash
+pip install -r requirements.txt && python bot.py
+```
+
+#### 8. Update this deployment later
+
+```bash
+cd /opt/discord-mcsm
+sudo systemctl stop discord-mcsm-web discord-mcsm-daemon
+
+git pull
+./install-dependents.sh
+./build.sh
+
+mkdir -p production-code/daemon/lib
+cd production-code/daemon/lib
+wget -O pty_linux_x64 https://github.com/MCSManager/PTY/releases/download/latest/pty_linux_x64
+wget -O file_zip_linux_x64 https://github.com/MCSManager/Zip-Tools/releases/download/latest/file_zip_linux_x64
+wget -O 7z_linux_x64 https://github.com/MCSManager/Zip-Tools/releases/download/latest/7z_linux_x64
+chmod +x pty_linux_x64 file_zip_linux_x64 7z_linux_x64
+
+sudo systemctl start discord-mcsm-daemon discord-mcsm-web
+```
+
+#### Development or local testing on Ubuntu
+
+For local development, use:
+
+```bash
+git clone -b codex/discord-hosting-platform https://github.com/PuneetGOTO/Discord-.git
+cd Discord-
+./install-dependents.sh
+
+mkdir -p daemon/lib
+wget -O daemon/lib/pty_linux_x64 https://github.com/MCSManager/PTY/releases/download/latest/pty_linux_x64
+wget -O daemon/lib/file_zip_linux_x64 https://github.com/MCSManager/Zip-Tools/releases/download/latest/file_zip_linux_x64
+wget -O daemon/lib/7z_linux_x64 https://github.com/MCSManager/Zip-Tools/releases/download/latest/7z_linux_x64
+chmod +x daemon/lib/*
+
+npm run dev
+```
+
+Development ports:
+
+- Frontend: `http://localhost:5173/`
+- Web panel API: `http://localhost:23333/`
+- Daemon: `http://localhost:24444/`
+
+<br />
+
 ### Windows
 
 **For Windows systems, it comes as a ready-to-run integrated version - download and run it immediately.**
