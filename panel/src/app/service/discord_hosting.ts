@@ -1,4 +1,5 @@
 import storage from "../common/system_storage";
+import { $t } from "../i18n";
 
 export type DiscordHostingRiskLevel = "allow" | "review" | "block";
 export type DiscordPreflightStatus = "pass" | "review" | "block";
@@ -98,23 +99,28 @@ interface DiscordHostingState {
   updatedAt: number;
 }
 
+interface DiscordHostingSourceTemplate {
+  titleKey: string;
+  url: string;
+}
+
 const STORE_NAME = "discord-hosting.json";
 
-const OFFICIAL_SOURCES: DiscordHostingSource[] = [
+const OFFICIAL_SOURCES: DiscordHostingSourceTemplate[] = [
   {
-    title: "Discord API rate limits",
+    titleKey: "SOURCE_RATE_LIMITS",
     url: "https://discord.com/developers/docs/topics/rate-limits"
   },
   {
-    title: "Discord Gateway intents",
+    titleKey: "SOURCE_GATEWAY_INTENTS",
     url: "https://discord.com/developers/docs/events/gateway#gateway-intents"
   },
   {
-    title: "Discord Developer Policy",
+    titleKey: "SOURCE_DEVELOPER_POLICY",
     url: "https://support-dev.discord.com/hc/en-us/articles/8563934450327-Discord-Developer-Policy"
   },
   {
-    title: "Discord bot verification",
+    titleKey: "SOURCE_BOT_VERIFICATION",
     url: "https://support-dev.discord.com/hc/en-us/articles/6209188462871-Bot-Verification-FAQ-for-Parents-Legal-Guardians-and-Other-Users"
   }
 ];
@@ -152,6 +158,17 @@ const BANNED_BEHAVIORS = [
 const PRIVILEGED_INTENTS = new Set(["GUILD_MEMBERS", "GUILD_PRESENCES", "MESSAGE_CONTENT"]);
 const HARD_BLOCK_FLAGS = new Set(BANNED_BEHAVIORS);
 let cachedState: DiscordHostingState | null = null;
+
+function t(key: string, params?: Record<string, unknown>) {
+  return $t(`TXT_CODE_DISCORD_${key}`, params);
+}
+
+function getOfficialSources(): DiscordHostingSource[] {
+  return OFFICIAL_SOURCES.map((source) => ({
+    title: t(source.titleKey),
+    url: source.url
+  }));
+}
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -245,31 +262,31 @@ function saveState(state: DiscordHostingState): DiscordHostingState {
 function getMetrics(settings: DiscordHostingSettings): DiscordHostingMetric[] {
   return [
     {
-      label: "Policy gate",
-      value: settings.requireManualReview ? "manual review" : "auto allow",
+      label: t("METRIC_POLICY_GATE"),
+      value: settings.requireManualReview ? t("VALUE_MANUAL_REVIEW") : t("VALUE_AUTO_ALLOW"),
       status: settings.requireManualReview ? "processing" : "warning",
-      detail: "Every bot manifest should be reviewed before first start and before major scope changes."
+      detail: t("METRIC_POLICY_GATE_DETAIL")
     },
     {
-      label: "Invalid request fuse",
+      label: t("METRIC_INVALID_REQUEST_FUSE"),
       value: `${settings.platformFuseInvalidRequestsPer10m}/10m`,
       status:
         settings.platformFuseInvalidRequestsPer10m < settings.discordInvalidRequestsPer10m
           ? "success"
           : "error",
-      detail: "Suspend bot traffic before Discord/Cloudflare invalid-request enforcement is reached."
+      detail: t("METRIC_INVALID_REQUEST_FUSE_DETAIL")
     },
     {
-      label: "REST ceiling",
+      label: t("METRIC_REST_CEILING"),
       value: `${settings.maxGlobalRestRpsPerBot} rps`,
       status: "success",
-      detail: "Use route buckets from Discord response headers plus a conservative per-bot global budget."
+      detail: t("METRIC_REST_CEILING_DETAIL")
     },
     {
-      label: "Egress mode",
-      value: settings.requireEgressGateway ? "gateway required" : "direct allowed",
+      label: t("METRIC_EGRESS_MODE"),
+      value: settings.requireEgressGateway ? t("VALUE_GATEWAY_REQUIRED") : t("VALUE_DIRECT_ALLOWED"),
       status: settings.requireEgressGateway ? "success" : "error",
-      detail: "Containers should not reach discord.com directly; all Discord traffic should pass through metering."
+      detail: t("METRIC_EGRESS_MODE_DETAIL")
     }
   ];
 }
@@ -278,67 +295,59 @@ function getFeatures(): DiscordHostingFeature[] {
   return [
     {
       key: "onboarding",
-      title: "Bot onboarding and review queue",
+      title: t("FEATURE_ONBOARDING"),
       status: "ready",
       owner: "panel",
-      detail:
-        "Collect application ID, owner contact, runtime, intents, traffic estimate, privacy policy and abuse-risk flags."
+      detail: t("FEATURE_ONBOARDING_DETAIL")
     },
     {
       key: "secret-vault",
-      title: "Token secret vault",
+      title: t("FEATURE_SECRET_VAULT"),
       status: "required",
       owner: "panel",
-      detail:
-        "Store bot tokens only as protected environment secrets; reject manifests that keep tokens in files or source code."
+      detail: t("FEATURE_SECRET_VAULT_DETAIL")
     },
     {
       key: "sandbox-runtime",
-      title: "Sandboxed worker runtime",
+      title: t("FEATURE_SANDBOX_RUNTIME"),
       status: "planned",
       owner: "daemon",
-      detail:
-        "Run each bot in a non-privileged container with cgroup CPU/RAM quotas, read-only base image and isolated writable volume."
+      detail: t("FEATURE_SANDBOX_RUNTIME_DETAIL")
     },
     {
       key: "egress-gateway",
-      title: "Discord egress gateway",
+      title: t("FEATURE_EGRESS_GATEWAY"),
       status: "required",
       owner: "network",
-      detail:
-        "Deny direct outbound internet from bot containers and force Discord REST/Gateway traffic through per-tenant metering."
+      detail: t("FEATURE_EGRESS_GATEWAY_DETAIL")
     },
     {
       key: "rate-limit-engine",
-      title: "Header-aware rate limiter",
+      title: t("FEATURE_RATE_LIMIT_ENGINE"),
       status: "planned",
       owner: "network",
-      detail:
-        "Track per-route buckets, global limits, 429 backoff, invalid 401/403/429 responses and websocket reconnect storms."
+      detail: t("FEATURE_RATE_LIMIT_ENGINE_DETAIL")
     },
     {
       key: "circuit-breaker",
-      title: "Abuse circuit breaker",
+      title: t("FEATURE_CIRCUIT_BREAKER"),
       status: "ready",
       owner: "panel",
-      detail:
-        "Preflight blocks high-risk manifests now; runtime metrics should later quarantine live bots automatically."
+      detail: t("FEATURE_CIRCUIT_BREAKER_DETAIL")
     },
     {
       key: "observability",
-      title: "Logs, metrics and audit trail",
+      title: t("FEATURE_OBSERVABILITY"),
       status: "planned",
       owner: "panel",
-      detail:
-        "Show bot logs, deploy history, rate-limit incidents, invalid-request budget burn and operator approvals."
+      detail: t("FEATURE_OBSERVABILITY_DETAIL")
     },
     {
       key: "risk-ip-pool",
-      title: "Risk-tier egress pools",
+      title: t("FEATURE_RISK_IP_POOL"),
       status: "planned",
       owner: "operator",
-      detail:
-        "Keep approved production bots, untrusted trials and quarantined workloads on separate outbound IP pools."
+      detail: t("FEATURE_RISK_IP_POOL_DETAIL")
     }
   ];
 }
@@ -346,40 +355,40 @@ function getFeatures(): DiscordHostingFeature[] {
 function getGuardrails(): DiscordHostingGuardrail[] {
   return [
     {
-      layer: "Pre-deploy",
-      control: "Manifest policy scan",
-      enforcement: "Block selfbots, user tokens, raids, scraping, spam and code-stored tokens.",
-      failureAction: "Reject deployment before files are scheduled."
+      layer: t("GUARDRAIL_LAYER_PRE_DEPLOY"),
+      control: t("GUARDRAIL_POLICY_SCAN"),
+      enforcement: t("GUARDRAIL_POLICY_SCAN_ENFORCEMENT"),
+      failureAction: t("GUARDRAIL_POLICY_SCAN_FAILURE")
     },
     {
-      layer: "Identity",
-      control: "Application ownership check",
-      enforcement: "Require application ID, owner contact and privileged-intent justification.",
-      failureAction: "Hold for manual review."
+      layer: t("GUARDRAIL_LAYER_IDENTITY"),
+      control: t("GUARDRAIL_OWNERSHIP"),
+      enforcement: t("GUARDRAIL_OWNERSHIP_ENFORCEMENT"),
+      failureAction: t("GUARDRAIL_OWNERSHIP_FAILURE")
     },
     {
-      layer: "Secrets",
-      control: "Token vault",
-      enforcement: "Inject token at runtime only; mask logs and deny token-like strings in repository scans.",
-      failureAction: "Block deploy or rotate secret."
+      layer: t("GUARDRAIL_LAYER_SECRETS"),
+      control: t("GUARDRAIL_TOKEN_VAULT"),
+      enforcement: t("GUARDRAIL_TOKEN_VAULT_ENFORCEMENT"),
+      failureAction: t("GUARDRAIL_TOKEN_VAULT_FAILURE")
     },
     {
-      layer: "Runtime",
-      control: "Container sandbox",
-      enforcement: "No privileged mode, no host networking, CPU/RAM/pid limits and restart backoff.",
-      failureAction: "Stop instance and mark it unhealthy."
+      layer: t("GUARDRAIL_LAYER_RUNTIME"),
+      control: t("GUARDRAIL_CONTAINER_SANDBOX"),
+      enforcement: t("GUARDRAIL_CONTAINER_SANDBOX_ENFORCEMENT"),
+      failureAction: t("GUARDRAIL_CONTAINER_SANDBOX_FAILURE")
     },
     {
-      layer: "Network",
-      control: "Discord egress gateway",
-      enforcement: "All REST and Gateway traffic is attributed to bot, tenant, route and token bucket.",
-      failureAction: "Throttle, quarantine or isolate egress IP."
+      layer: t("GUARDRAIL_LAYER_NETWORK"),
+      control: t("GUARDRAIL_EGRESS_GATEWAY"),
+      enforcement: t("GUARDRAIL_EGRESS_GATEWAY_ENFORCEMENT"),
+      failureAction: t("GUARDRAIL_EGRESS_GATEWAY_FAILURE")
     },
     {
-      layer: "Abuse",
-      control: "Invalid request fuse",
-      enforcement: "Count 401/403/429 responses per bot and per egress IP within the 10 minute window.",
-      failureAction: "Suspend bot before the shared IP reaches Discord's invalid-request threshold."
+      layer: t("GUARDRAIL_LAYER_ABUSE"),
+      control: t("GUARDRAIL_INVALID_REQUEST_FUSE"),
+      enforcement: t("GUARDRAIL_INVALID_REQUEST_FUSE_ENFORCEMENT"),
+      failureAction: t("GUARDRAIL_INVALID_REQUEST_FUSE_FAILURE")
     }
   ];
 }
@@ -390,25 +399,25 @@ export function getDiscordHostingOverview(): DiscordHostingOverview {
     settings: clone(state.settings),
     metrics: getMetrics(state.settings),
     architecture: [
-      "Panel API: review queue, policy engine, operator approvals and audit history.",
-      "Scheduler: maps approved bots to daemon workers and risk-tier egress pools.",
-      "Daemon worker: isolated container runtime with resource quotas and controlled environment secrets.",
-      "Egress gateway: the only path to Discord REST and Gateway endpoints; owns buckets and invalid-request fuse.",
-      "Telemetry: aggregates logs, 429s, invalid responses, reconnects, message volume and quarantine events."
+      t("ARCH_PANEL_API"),
+      t("ARCH_SCHEDULER"),
+      t("ARCH_DAEMON_WORKER"),
+      t("ARCH_EGRESS_GATEWAY"),
+      t("ARCH_TELEMETRY")
     ],
     features: getFeatures(),
     guardrails: getGuardrails(),
     deploymentGates: [
-      "Application ID and owner contact are present.",
-      "No user account token, selfbot, raid, scraping or unsolicited messaging behavior is declared.",
-      "Bot token is stored in the platform secret vault, not in source code or uploaded files.",
-      "Privileged intents have business justification, privacy policy and manual approval.",
-      "Direct outbound network access is denied; Discord traffic uses the metered egress gateway.",
-      "REST request estimate fits per-bot budget and reconnect backoff is enabled.",
-      "Runtime container has CPU, memory, process and restart limits."
+      t("GATE_APPLICATION_ID"),
+      t("GATE_NO_ABUSE_BEHAVIOR"),
+      t("GATE_TOKEN_VAULT"),
+      t("GATE_PRIVILEGED_INTENTS"),
+      t("GATE_EGRESS"),
+      t("GATE_REST_BUDGET"),
+      t("GATE_RUNTIME_LIMITS")
     ],
     bannedBehaviors: [...BANNED_BEHAVIORS],
-    sources: clone(OFFICIAL_SOURCES),
+    sources: getOfficialSources(),
     updatedAt: state.updatedAt
   };
 }
@@ -477,17 +486,17 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "review",
-      "Missing bot name",
-      "The manifest does not include a human-readable bot name.",
-      "Collect a bot name for audit records and incident response."
+      t("CHECK_MISSING_BOT_NAME"),
+      t("CHECK_MISSING_BOT_NAME_DETAIL"),
+      t("CHECK_MISSING_BOT_NAME_REMEDIATION")
     );
   } else {
     addCheck(
       checks,
       "pass",
-      "Bot identity present",
-      `Manifest name: ${manifest.name}`,
-      "No action required."
+      t("CHECK_BOT_IDENTITY_PRESENT"),
+      t("CHECK_BOT_IDENTITY_PRESENT_DETAIL", { name: manifest.name }),
+      t("CHECK_NO_ACTION")
     );
   }
 
@@ -495,9 +504,9 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "review",
-      "Missing application ID",
-      "Discord application ID is required to tie deployments to a developer application.",
-      "Require the owner to submit the Discord application ID before approval."
+      t("CHECK_MISSING_APPLICATION_ID"),
+      t("CHECK_MISSING_APPLICATION_ID_DETAIL"),
+      t("CHECK_MISSING_APPLICATION_ID_REMEDIATION")
     );
   }
 
@@ -505,9 +514,9 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "block",
-      "User token or selfbot detected",
-      "Discord bot hosting must not automate normal user accounts or use user tokens.",
-      "Reject deployment. Require a proper bot application token.",
+      t("CHECK_USER_TOKEN"),
+      t("CHECK_USER_TOKEN_DETAIL"),
+      t("CHECK_USER_TOKEN_REMEDIATION"),
       OFFICIAL_SOURCES[2].url
     );
   }
@@ -517,9 +526,9 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "block",
-      "Prohibited behavior flags",
-      `Manifest declares high-risk behavior: ${blockedFlags.join(", ")}.`,
-      "Reject deployment and keep this workload off shared egress infrastructure.",
+      t("CHECK_PROHIBITED_FLAGS"),
+      t("CHECK_PROHIBITED_FLAGS_DETAIL", { flags: blockedFlags.join(", ") }),
+      t("CHECK_PROHIBITED_FLAGS_REMEDIATION"),
       OFFICIAL_SOURCES[2].url
     );
   }
@@ -528,25 +537,25 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "block",
-      "Unsafe token storage",
-      `Token storage mode is ${manifest.tokenStorage}.`,
-      "Move tokens into the platform secret vault or environment secret injection before deploy."
+      t("CHECK_UNSAFE_TOKEN_STORAGE"),
+      t("CHECK_TOKEN_STORAGE_MODE", { mode: manifest.tokenStorage }),
+      t("CHECK_UNSAFE_TOKEN_STORAGE_REMEDIATION")
     );
   } else if (manifest.tokenStorage === "unknown") {
     addCheck(
       checks,
       "review",
-      "Token storage unknown",
-      "The manifest does not prove token handling is isolated from source files and logs.",
-      "Require token vault confirmation before approval."
+      t("CHECK_TOKEN_STORAGE_UNKNOWN"),
+      t("CHECK_TOKEN_STORAGE_UNKNOWN_DETAIL"),
+      t("CHECK_TOKEN_STORAGE_UNKNOWN_REMEDIATION")
     );
   } else {
     addCheck(
       checks,
       "pass",
-      "Token storage accepted",
-      `Token storage mode is ${manifest.tokenStorage}.`,
-      "No action required."
+      t("CHECK_TOKEN_STORAGE_ACCEPTED"),
+      t("CHECK_TOKEN_STORAGE_MODE", { mode: manifest.tokenStorage }),
+      t("CHECK_NO_ACTION")
     );
   }
 
@@ -554,26 +563,26 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "block",
-      "Direct Discord egress",
-      "Direct outbound network access prevents the platform from counting 429/401/403 responses and protecting shared IPs.",
-      "Force the bot through the Discord egress gateway before start.",
+      t("CHECK_DIRECT_EGRESS"),
+      t("CHECK_DIRECT_EGRESS_DETAIL"),
+      t("CHECK_DIRECT_EGRESS_REMEDIATION"),
       OFFICIAL_SOURCES[0].url
     );
   } else if (manifest.outboundMode === "unknown") {
     addCheck(
       checks,
       "review",
-      "Outbound path unknown",
-      "The manifest does not state whether Discord traffic uses the platform egress gateway.",
-      "Confirm egress gateway enforcement before deployment."
+      t("CHECK_OUTBOUND_UNKNOWN"),
+      t("CHECK_OUTBOUND_UNKNOWN_DETAIL"),
+      t("CHECK_OUTBOUND_UNKNOWN_REMEDIATION")
     );
   } else {
     addCheck(
       checks,
       "pass",
-      "Egress path accepted",
-      `Outbound mode is ${manifest.outboundMode}.`,
-      "Keep direct container internet disabled."
+      t("CHECK_EGRESS_ACCEPTED"),
+      t("CHECK_EGRESS_ACCEPTED_DETAIL", { mode: manifest.outboundMode }),
+      t("CHECK_EGRESS_ACCEPTED_REMEDIATION")
     );
   }
 
@@ -581,27 +590,27 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "review",
-      "Privileged intents need review",
-      `Requested privileged intents: ${privilegedIntents.join(", ")}.`,
-      "Require owner justification, privacy policy, Discord intent approval evidence and manual review.",
+      t("CHECK_PRIVILEGED_INTENTS_NEED_REVIEW"),
+      t("CHECK_PRIVILEGED_INTENTS_DETAIL", { intents: privilegedIntents.join(", ") }),
+      t("CHECK_PRIVILEGED_INTENTS_NEED_REVIEW_REMEDIATION"),
       OFFICIAL_SOURCES[1].url
     );
   } else if (privilegedIntents.length > 0) {
     addCheck(
       checks,
       "review",
-      "Privileged intents declared",
-      `Requested privileged intents: ${privilegedIntents.join(", ")}.`,
-      "Verify Discord approval and confirm the data retention policy before start.",
+      t("CHECK_PRIVILEGED_INTENTS_DECLARED"),
+      t("CHECK_PRIVILEGED_INTENTS_DETAIL", { intents: privilegedIntents.join(", ") }),
+      t("CHECK_PRIVILEGED_INTENTS_DECLARED_REMEDIATION"),
       OFFICIAL_SOURCES[1].url
     );
   } else {
     addCheck(
       checks,
       "pass",
-      "Intent surface is limited",
-      "No privileged intents were declared.",
-      "Prefer slash commands and interaction events."
+      t("CHECK_INTENT_LIMITED"),
+      t("CHECK_INTENT_LIMITED_DETAIL"),
+      t("CHECK_INTENT_LIMITED_REMEDIATION")
     );
   }
 
@@ -611,18 +620,21 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "review",
-      "REST volume exceeds platform budget",
-      `Expected ${expectedRestRequestsPerMinute} REST requests/minute; platform budget is ${settings.maxRestRequestsPerMinutePerBot}/minute.`,
-      "Require sharding, caching, queueing and a lower per-route send budget before approval.",
+      t("CHECK_REST_VOLUME_HIGH"),
+      t("CHECK_REST_VOLUME_HIGH_DETAIL", {
+        expected: expectedRestRequestsPerMinute,
+        budget: settings.maxRestRequestsPerMinutePerBot
+      }),
+      t("CHECK_REST_VOLUME_HIGH_REMEDIATION"),
       OFFICIAL_SOURCES[0].url
     );
   } else {
     addCheck(
       checks,
       "pass",
-      "REST volume fits budget",
-      `Expected ${expectedRestRequestsPerMinute} REST requests/minute.`,
-      "Egress gateway should still honor Discord rate-limit response headers."
+      t("CHECK_REST_VOLUME_OK"),
+      t("CHECK_REST_VOLUME_OK_DETAIL", { expected: expectedRestRequestsPerMinute }),
+      t("CHECK_REST_VOLUME_OK_REMEDIATION")
     );
   }
 
@@ -630,9 +642,12 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "review",
-      "Message send volume is high",
-      `Expected ${expectedMessagesPerMinute} messages/minute; platform budget is ${settings.maxMessagesPerMinutePerBot}/minute.`,
-      "Require queueing, per-channel cooldowns and anti-spam review."
+      t("CHECK_MESSAGE_VOLUME_HIGH"),
+      t("CHECK_MESSAGE_VOLUME_HIGH_DETAIL", {
+        expected: expectedMessagesPerMinute,
+        budget: settings.maxMessagesPerMinutePerBot
+      }),
+      t("CHECK_MESSAGE_VOLUME_HIGH_REMEDIATION")
     );
   }
 
@@ -640,9 +655,9 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "review",
-      "Slash-command-first design missing",
-      "Bots that depend on broad message reads increase compliance and intent risk.",
-      "Prefer slash commands, components and interaction webhooks over broad message listeners.",
+      t("CHECK_SLASH_COMMAND_MISSING"),
+      t("CHECK_SLASH_COMMAND_MISSING_DETAIL"),
+      t("CHECK_SLASH_COMMAND_MISSING_REMEDIATION"),
       OFFICIAL_SOURCES[1].url
     );
   }
@@ -651,9 +666,9 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "review",
-      "Reconnect backoff missing",
-      "A reconnect loop can flood the Gateway after network incidents.",
-      "Add exponential backoff, jitter and max restart policy in daemon runtime."
+      t("CHECK_RECONNECT_BACKOFF_MISSING"),
+      t("CHECK_RECONNECT_BACKOFF_MISSING_DETAIL"),
+      t("CHECK_RECONNECT_BACKOFF_MISSING_REMEDIATION")
     );
   }
 
@@ -661,9 +676,9 @@ export function evaluateDiscordBotManifest(
     addCheck(
       checks,
       "review",
-      "Scale review required",
-      `Expected guild count is ${expectedGuilds}.`,
-      "Review sharding, verification readiness, data handling and incident response before onboarding more servers.",
+      t("CHECK_SCALE_REVIEW"),
+      t("CHECK_SCALE_REVIEW_DETAIL", { guilds: expectedGuilds }),
+      t("CHECK_SCALE_REVIEW_REMEDIATION"),
       OFFICIAL_SOURCES[3].url
     );
   }
@@ -683,17 +698,17 @@ export function evaluateDiscordBotManifest(
     score,
     summary:
       risk === "block"
-        ? "Deployment blocked. The manifest includes behavior or architecture that can put shared Discord egress IPs at risk."
+        ? t("SUMMARY_BLOCK")
         : risk === "review"
-          ? "Manual review required before deployment. Fix or approve the listed controls first."
-          : "Manifest can be deployed through the guarded Discord hosting path.",
+          ? t("SUMMARY_REVIEW")
+          : t("SUMMARY_ALLOW"),
     checks,
     recommendedControls: [
-      "Run the bot only through the Discord egress gateway.",
-      "Store tokens in the platform secret vault and mask token-like log output.",
-      "Enable per-route REST buckets, global token bucket and 10 minute invalid-request fuse.",
-      "Use slash commands/interactions before broad message-content reads.",
-      "Keep restart backoff, jitter and max crash-loop limits enabled."
+      t("CONTROL_EGRESS_GATEWAY"),
+      t("CONTROL_SECRET_VAULT"),
+      t("CONTROL_RATE_LIMITS"),
+      t("CONTROL_SLASH_COMMANDS"),
+      t("CONTROL_RESTART_BACKOFF")
     ],
     manifest
   };

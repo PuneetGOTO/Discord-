@@ -216,7 +216,7 @@ function getDefaultFrontendLayoutConfig(): IPageLayoutConfig[] {
           id: getRandomId(),
           meta: {},
           type: "DiscordHosting",
-          title: "Discord Bot Hosting",
+          title: t("TXT_CODE_DISCORD_BOT_HOSTING_TITLE"),
           width: 12,
           height: LayoutCardHeight.AUTO,
           disableDelete: true

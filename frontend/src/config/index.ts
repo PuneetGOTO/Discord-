@@ -536,9 +536,9 @@ export function getLayoutCardPool() {
       permission: ROLE.ADMIN,
       meta: {},
       type: "DiscordHosting",
-      title: "Discord Bot Hosting",
+      title: t("TXT_CODE_DISCORD_BOT_HOSTING_TITLE"),
       width: 12,
-      description: "Policy-first Discord bot hosting control plane",
+      description: t("TXT_CODE_DISCORD_BOT_HOSTING_DESC"),
       height: LayoutCardHeight.AUTO,
       category: NEW_CARD_TYPE.OTHER
     },

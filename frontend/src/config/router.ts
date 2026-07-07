@@ -190,7 +190,7 @@ const originRouterConfig: RouterConfig[] = [
   },
   {
     path: "/discord",
-    name: "Discord Hosting",
+    name: t("TXT_CODE_DISCORD_HOSTING_TITLE"),
     component: LayoutContainer,
     meta: {
       mainMenu: true,

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BetweenMenus from "@/components/BetweenMenus.vue";
 import type { LayoutCard } from "@/types";
+import { t } from "@/lang/i18n";
 import {
   discordHostingOverview,
   discordHostingPreflight,
@@ -54,42 +55,42 @@ const manifest = reactive<DiscordBotManifest>({
 });
 
 const gatewayIntentOptions = [
-  { label: "Guilds", value: "GUILDS" },
-  { label: "Guild members", value: "GUILD_MEMBERS" },
-  { label: "Guild presences", value: "GUILD_PRESENCES" },
-  { label: "Message content", value: "MESSAGE_CONTENT" }
+  { label: t("TXT_CODE_DISCORD_INTENT_GUILDS"), value: "GUILDS" },
+  { label: t("TXT_CODE_DISCORD_INTENT_GUILD_MEMBERS"), value: "GUILD_MEMBERS" },
+  { label: t("TXT_CODE_DISCORD_INTENT_GUILD_PRESENCES"), value: "GUILD_PRESENCES" },
+  { label: t("TXT_CODE_DISCORD_INTENT_MESSAGE_CONTENT"), value: "MESSAGE_CONTENT" }
 ];
 
 const behaviorOptions = [
-  { label: "Mass DM", value: "mass-dm" },
-  { label: "Unsolicited ads", value: "unsolicited-ads" },
-  { label: "Webhook spam", value: "webhook-spam" },
-  { label: "Guild scraping", value: "guild-scraping" },
-  { label: "Raid tools", value: "raid-tools" },
-  { label: "Invite join automation", value: "invite-join-automation" },
-  { label: "Captcha bypass", value: "captcha-bypass" },
-  { label: "Malware", value: "malware" }
+  { label: t("TXT_CODE_DISCORD_BEHAVIOR_MASS_DM"), value: "mass-dm" },
+  { label: t("TXT_CODE_DISCORD_BEHAVIOR_UNSOLICITED_ADS"), value: "unsolicited-ads" },
+  { label: t("TXT_CODE_DISCORD_BEHAVIOR_WEBHOOK_SPAM"), value: "webhook-spam" },
+  { label: t("TXT_CODE_DISCORD_BEHAVIOR_GUILD_SCRAPING"), value: "guild-scraping" },
+  { label: t("TXT_CODE_DISCORD_BEHAVIOR_RAID_TOOLS"), value: "raid-tools" },
+  { label: t("TXT_CODE_DISCORD_BEHAVIOR_INVITE_JOIN"), value: "invite-join-automation" },
+  { label: t("TXT_CODE_DISCORD_BEHAVIOR_CAPTCHA_BYPASS"), value: "captcha-bypass" },
+  { label: t("TXT_CODE_DISCORD_BEHAVIOR_MALWARE"), value: "malware" }
 ];
 
 const featureColumns = [
-  { title: "Capability", dataIndex: "title", key: "title" },
-  { title: "Status", dataIndex: "status", key: "status", width: 120 },
-  { title: "Owner", dataIndex: "owner", key: "owner", width: 120 },
-  { title: "Detail", dataIndex: "detail", key: "detail" }
+  { title: t("TXT_CODE_DISCORD_COLUMN_CAPABILITY"), dataIndex: "title", key: "title" },
+  { title: t("TXT_CODE_DISCORD_COLUMN_STATUS"), dataIndex: "status", key: "status", width: 120 },
+  { title: t("TXT_CODE_DISCORD_COLUMN_OWNER"), dataIndex: "owner", key: "owner", width: 120 },
+  { title: t("TXT_CODE_DISCORD_COLUMN_DETAIL"), dataIndex: "detail", key: "detail" }
 ];
 
 const guardrailColumns = [
-  { title: "Layer", dataIndex: "layer", key: "layer", width: 120 },
-  { title: "Control", dataIndex: "control", key: "control", width: 210 },
-  { title: "Enforcement", dataIndex: "enforcement", key: "enforcement" },
-  { title: "Failure action", dataIndex: "failureAction", key: "failureAction" }
+  { title: t("TXT_CODE_DISCORD_COLUMN_LAYER"), dataIndex: "layer", key: "layer", width: 120 },
+  { title: t("TXT_CODE_DISCORD_COLUMN_CONTROL"), dataIndex: "control", key: "control", width: 210 },
+  { title: t("TXT_CODE_DISCORD_COLUMN_ENFORCEMENT"), dataIndex: "enforcement", key: "enforcement" },
+  { title: t("TXT_CODE_DISCORD_COLUMN_FAILURE_ACTION"), dataIndex: "failureAction", key: "failureAction" }
 ];
 
 const checkColumns = [
-  { title: "Result", dataIndex: "status", key: "status", width: 110 },
-  { title: "Check", dataIndex: "title", key: "title", width: 220 },
-  { title: "Detail", dataIndex: "detail", key: "detail" },
-  { title: "Remediation", dataIndex: "remediation", key: "remediation" }
+  { title: t("TXT_CODE_DISCORD_COLUMN_RESULT"), dataIndex: "status", key: "status", width: 110 },
+  { title: t("TXT_CODE_DISCORD_COLUMN_CHECK"), dataIndex: "title", key: "title", width: 220 },
+  { title: t("TXT_CODE_DISCORD_COLUMN_DETAIL"), dataIndex: "detail", key: "detail" },
+  { title: t("TXT_CODE_DISCORD_COLUMN_REMEDIATION"), dataIndex: "remediation", key: "remediation" }
 ];
 
 const riskMeta = computed(() => {
@@ -99,7 +100,7 @@ const riskMeta = computed(() => {
       color: "red",
       status: "exception" as const,
       icon: WarningOutlined,
-      title: "Blocked"
+      title: t("TXT_CODE_DISCORD_RISK_BLOCKED")
     };
   }
   if (risk === "review") {
@@ -107,14 +108,14 @@ const riskMeta = computed(() => {
       color: "orange",
       status: "active" as const,
       icon: ThunderboltOutlined,
-      title: "Review"
+      title: t("TXT_CODE_DISCORD_RISK_REVIEW")
     };
   }
   return {
     color: "green",
     status: "success" as const,
     icon: CheckCircleOutlined,
-    title: "Allowed"
+    title: t("TXT_CODE_DISCORD_RISK_ALLOWED")
   };
 });
 
@@ -145,7 +146,7 @@ const runPreflight = async () => {
   });
   preflight.value = state.value;
   if (preflight.value?.risk === "allow") {
-    message.success("Preflight passed.");
+    message.success(t("TXT_CODE_DISCORD_PREFLIGHT_PASSED"));
   }
 };
 
@@ -158,7 +159,34 @@ const statusColor = (status: string) => {
 
 const featureRowKey = (record: DiscordHostingFeature) => record.key;
 const checkRowKey = (record: DiscordPreflightCheck) => `${record.status}-${record.title}`;
-const checkTagText = (status: DiscordPreflightStatus) => status.toUpperCase();
+
+const statusText = (status: string) => {
+  const statusMap: Record<string, string> = {
+    ready: t("TXT_CODE_DISCORD_STATUS_READY"),
+    planned: t("TXT_CODE_DISCORD_STATUS_PLANNED"),
+    required: t("TXT_CODE_DISCORD_STATUS_REQUIRED"),
+    pass: t("TXT_CODE_DISCORD_STATUS_PASS"),
+    review: t("TXT_CODE_DISCORD_STATUS_REVIEW"),
+    block: t("TXT_CODE_DISCORD_STATUS_BLOCK"),
+    success: t("TXT_CODE_DISCORD_STATUS_SUCCESS"),
+    warning: t("TXT_CODE_DISCORD_STATUS_WARNING"),
+    error: t("TXT_CODE_DISCORD_STATUS_ERROR"),
+    processing: t("TXT_CODE_DISCORD_STATUS_PROCESSING")
+  };
+  return statusMap[status] || status;
+};
+
+const ownerText = (owner: string) => {
+  const ownerMap: Record<string, string> = {
+    panel: t("TXT_CODE_DISCORD_OWNER_PANEL"),
+    daemon: t("TXT_CODE_DISCORD_OWNER_DAEMON"),
+    network: t("TXT_CODE_DISCORD_OWNER_NETWORK"),
+    operator: t("TXT_CODE_DISCORD_OWNER_OPERATOR")
+  };
+  return ownerMap[owner] || owner;
+};
+
+const checkTagText = (status: DiscordPreflightStatus) => statusText(status);
 
 onMounted(() => {
   loadOverview();
@@ -179,11 +207,11 @@ onMounted(() => {
           <template #right>
             <a-button :loading="overviewApi.isLoading.value" @click="loadOverview">
               <ReloadOutlined />
-              Refresh
+              {{ t("TXT_CODE_DISCORD_REFRESH") }}
             </a-button>
             <a-button type="primary" :loading="preflightApi.isLoading.value" @click="runPreflight">
               <SafetyCertificateOutlined />
-              Run preflight
+              {{ t("TXT_CODE_DISCORD_RUN_PREFLIGHT") }}
             </a-button>
           </template>
         </BetweenMenus>
@@ -193,8 +221,8 @@ onMounted(() => {
         <a-alert
           show-icon
           type="warning"
-          message="Discord hosting must be a controlled platform path, not a generic Node.js template."
-          description="The safe architecture blocks high-risk manifests before deploy, forces Discord traffic through a metered egress gateway, and suspends bots before invalid requests can burn a shared IP."
+          :message="t('TXT_CODE_DISCORD_ALERT_TITLE')"
+          :description="t('TXT_CODE_DISCORD_ALERT_DESC')"
         />
       </a-col>
 
@@ -202,7 +230,7 @@ onMounted(() => {
         <section class="metric-panel">
           <a-statistic :title="metric.label" :value="metric.value" />
           <a-tag class="mt-8" :color="statusColor(metric.status)">
-            {{ metric.status }}
+            {{ statusText(metric.status) }}
           </a-tag>
           <p>{{ metric.detail }}</p>
         </section>
@@ -212,7 +240,7 @@ onMounted(() => {
         <section class="section-panel">
           <div class="section-title">
             <CloudServerOutlined />
-            Architecture path
+            {{ t("TXT_CODE_DISCORD_ARCHITECTURE_PATH") }}
           </div>
           <a-steps direction="vertical" size="small" :current="overview?.architecture.length || 0">
             <a-step
@@ -229,8 +257,10 @@ onMounted(() => {
         <section class="section-panel">
           <div class="section-title">
             <LockOutlined />
-            Deployment gates
-            <a-typography-text type="secondary">Updated {{ updatedAtText }}</a-typography-text>
+            {{ t("TXT_CODE_DISCORD_DEPLOYMENT_GATES") }}
+            <a-typography-text type="secondary">
+              {{ t("TXT_CODE_DISCORD_UPDATED", { time: updatedAtText }) }}
+            </a-typography-text>
           </div>
           <a-list size="small" :data-source="overview?.deploymentGates || []">
             <template #renderItem="{ item }">
@@ -247,7 +277,7 @@ onMounted(() => {
         <section class="section-panel">
           <div class="section-title">
             <SafetyCertificateOutlined />
-            Capability map
+            {{ t("TXT_CODE_DISCORD_CAPABILITY_MAP") }}
           </div>
           <a-table
             :columns="featureColumns"
@@ -259,11 +289,11 @@ onMounted(() => {
             <template #bodyCell="{ column, record }">
               <template v-if="column.key === 'status'">
                 <a-tag :color="statusColor(record.status)">
-                  {{ record.status }}
+                  {{ statusText(record.status) }}
                 </a-tag>
               </template>
               <template v-else-if="column.key === 'owner'">
-                <a-tag>{{ record.owner }}</a-tag>
+                <a-tag>{{ ownerText(record.owner) }}</a-tag>
               </template>
             </template>
           </a-table>
@@ -274,7 +304,7 @@ onMounted(() => {
         <section class="section-panel">
           <div class="section-title">
             <WarningOutlined />
-            Runtime guardrails
+            {{ t("TXT_CODE_DISCORD_RUNTIME_GUARDRAILS") }}
           </div>
           <a-table
             :columns="guardrailColumns"
@@ -290,47 +320,52 @@ onMounted(() => {
         <section class="section-panel">
           <div class="section-title">
             <ThunderboltOutlined />
-            Bot manifest preflight
+            {{ t("TXT_CODE_DISCORD_BOT_MANIFEST_PREFLIGHT") }}
           </div>
           <a-form layout="vertical" class="preflight-form">
             <a-row :gutter="[12, 0]">
               <a-col :span="24" :md="12">
-                <a-form-item label="Bot name">
+                <a-form-item :label="t('TXT_CODE_DISCORD_BOT_NAME')">
                   <a-input v-model:value="manifest.name" />
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="12">
-                <a-form-item label="Application ID">
-                  <a-input v-model:value="manifest.applicationId" placeholder="Discord application ID" />
+                <a-form-item :label="t('TXT_CODE_DISCORD_APPLICATION_ID')">
+                  <a-input
+                    v-model:value="manifest.applicationId"
+                    :placeholder="t('TXT_CODE_DISCORD_APPLICATION_ID_PLACEHOLDER')"
+                  />
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="12">
-                <a-form-item label="Runtime">
+                <a-form-item :label="t('TXT_CODE_DISCORD_RUNTIME')">
                   <a-select v-model:value="manifest.runtime">
                     <a-select-option value="nodejs">Node.js</a-select-option>
                     <a-select-option value="python">Python</a-select-option>
                     <a-select-option value="java">Java</a-select-option>
-                    <a-select-option value="other">Other</a-select-option>
+                    <a-select-option value="other">
+                      {{ t("TXT_CODE_DISCORD_OTHER") }}
+                    </a-select-option>
                   </a-select>
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="12">
-                <a-form-item label="Library">
+                <a-form-item :label="t('TXT_CODE_DISCORD_LIBRARY')">
                   <a-input v-model:value="manifest.library" />
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="12">
-                <a-form-item label="Expected guilds">
+                <a-form-item :label="t('TXT_CODE_DISCORD_EXPECTED_GUILDS')">
                   <a-input-number v-model:value="manifest.expectedGuilds" :min="0" class="fill" />
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="12">
-                <a-form-item label="Shard count">
+                <a-form-item :label="t('TXT_CODE_DISCORD_SHARD_COUNT')">
                   <a-input-number v-model:value="manifest.shardCount" :min="1" class="fill" />
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="12">
-                <a-form-item label="REST requests per minute">
+                <a-form-item :label="t('TXT_CODE_DISCORD_REST_REQUESTS_PER_MINUTE')">
                   <a-input-number
                     v-model:value="manifest.expectedRestRequestsPerMinute"
                     :min="0"
@@ -339,7 +374,7 @@ onMounted(() => {
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="12">
-                <a-form-item label="Messages per minute">
+                <a-form-item :label="t('TXT_CODE_DISCORD_MESSAGES_PER_MINUTE')">
                   <a-input-number
                     v-model:value="manifest.expectedMessagesPerMinute"
                     :min="0"
@@ -348,28 +383,46 @@ onMounted(() => {
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="12">
-                <a-form-item label="Token storage">
+                <a-form-item :label="t('TXT_CODE_DISCORD_TOKEN_STORAGE')">
                   <a-select v-model:value="manifest.tokenStorage">
-                    <a-select-option value="vault">Secret vault</a-select-option>
-                    <a-select-option value="env">Environment secret</a-select-option>
-                    <a-select-option value="file">File</a-select-option>
-                    <a-select-option value="code">Source code</a-select-option>
-                    <a-select-option value="unknown">Unknown</a-select-option>
+                    <a-select-option value="vault">
+                      {{ t("TXT_CODE_DISCORD_SECRET_VAULT") }}
+                    </a-select-option>
+                    <a-select-option value="env">
+                      {{ t("TXT_CODE_DISCORD_ENV_SECRET") }}
+                    </a-select-option>
+                    <a-select-option value="file">
+                      {{ t("TXT_CODE_DISCORD_FILE") }}
+                    </a-select-option>
+                    <a-select-option value="code">
+                      {{ t("TXT_CODE_DISCORD_SOURCE_CODE") }}
+                    </a-select-option>
+                    <a-select-option value="unknown">
+                      {{ t("TXT_CODE_DISCORD_UNKNOWN") }}
+                    </a-select-option>
                   </a-select>
                 </a-form-item>
               </a-col>
               <a-col :span="24" :md="12">
-                <a-form-item label="Outbound mode">
+                <a-form-item :label="t('TXT_CODE_DISCORD_OUTBOUND_MODE')">
                   <a-select v-model:value="manifest.outboundMode">
-                    <a-select-option value="platform-egress">Platform egress</a-select-option>
-                    <a-select-option value="dedicated-egress">Dedicated egress</a-select-option>
-                    <a-select-option value="direct">Direct internet</a-select-option>
-                    <a-select-option value="unknown">Unknown</a-select-option>
+                    <a-select-option value="platform-egress">
+                      {{ t("TXT_CODE_DISCORD_PLATFORM_EGRESS") }}
+                    </a-select-option>
+                    <a-select-option value="dedicated-egress">
+                      {{ t("TXT_CODE_DISCORD_DEDICATED_EGRESS") }}
+                    </a-select-option>
+                    <a-select-option value="direct">
+                      {{ t("TXT_CODE_DISCORD_DIRECT_INTERNET") }}
+                    </a-select-option>
+                    <a-select-option value="unknown">
+                      {{ t("TXT_CODE_DISCORD_UNKNOWN") }}
+                    </a-select-option>
                   </a-select>
                 </a-form-item>
               </a-col>
               <a-col :span="24">
-                <a-form-item label="Gateway intents">
+                <a-form-item :label="t('TXT_CODE_DISCORD_GATEWAY_INTENTS')">
                   <a-checkbox-group
                     v-model:value="manifest.gatewayIntents"
                     :options="gatewayIntentOptions"
@@ -377,28 +430,28 @@ onMounted(() => {
                 </a-form-item>
               </a-col>
               <a-col :span="24">
-                <a-form-item label="Risk behavior flags">
+                <a-form-item :label="t('TXT_CODE_DISCORD_RISK_BEHAVIOR_FLAGS')">
                   <a-select
                     v-model:value="manifest.behaviorFlags"
                     mode="multiple"
                     :options="behaviorOptions"
-                    placeholder="Select declared high-risk behaviors"
+                    :placeholder="t('TXT_CODE_DISCORD_RISK_BEHAVIOR_PLACEHOLDER')"
                   />
                 </a-form-item>
               </a-col>
               <a-col :span="24">
                 <div class="toggle-grid">
                   <a-checkbox v-model:checked="manifest.hasPrivacyPolicy">
-                    Privacy policy ready
+                    {{ t("TXT_CODE_DISCORD_PRIVACY_POLICY_READY") }}
                   </a-checkbox>
                   <a-checkbox v-model:checked="manifest.usesUserToken">
-                    Uses user account token
+                    {{ t("TXT_CODE_DISCORD_USES_USER_TOKEN") }}
                   </a-checkbox>
                   <a-checkbox v-model:checked="manifest.slashCommandFirst">
-                    Slash-command-first
+                    {{ t("TXT_CODE_DISCORD_SLASH_COMMAND_FIRST") }}
                   </a-checkbox>
                   <a-checkbox v-model:checked="manifest.reconnectBackoff">
-                    Reconnect backoff
+                    {{ t("TXT_CODE_DISCORD_RECONNECT_BACKOFF") }}
                   </a-checkbox>
                 </div>
               </a-col>
@@ -411,17 +464,17 @@ onMounted(() => {
         <section class="section-panel result-panel">
           <div class="section-title">
             <SafetyCertificateOutlined />
-            Preflight result
+            {{ t("TXT_CODE_DISCORD_PREFLIGHT_RESULT") }}
           </div>
 
-          <a-empty v-if="!preflight" description="Run preflight to evaluate a bot manifest." />
+          <a-empty v-if="!preflight" :description="t('TXT_CODE_DISCORD_EMPTY_PREFLIGHT')" />
 
           <template v-else>
             <div class="risk-summary">
               <component :is="riskMeta.icon" class="risk-icon" />
               <div class="risk-copy">
                 <a-tag :color="riskMeta.color">{{ riskMeta.title }}</a-tag>
-                <strong>Score {{ preflight.score }}/100</strong>
+                <strong>{{ t("TXT_CODE_DISCORD_SCORE", { score: preflight.score }) }}</strong>
                 <span>{{ preflight.summary }}</span>
               </div>
               <a-progress
@@ -455,7 +508,7 @@ onMounted(() => {
         <section class="section-panel">
           <div class="section-title">
             <WarningOutlined />
-            Always blocked behavior
+            {{ t("TXT_CODE_DISCORD_ALWAYS_BLOCKED_BEHAVIOR") }}
           </div>
           <div class="tag-list">
             <a-tag v-for="flag in overview?.bannedBehaviors || []" :key="flag" color="red">
@@ -469,7 +522,7 @@ onMounted(() => {
         <section class="section-panel">
           <div class="section-title">
             <ApiOutlined />
-            Official references
+            {{ t("TXT_CODE_DISCORD_OFFICIAL_REFERENCES") }}
           </div>
           <a-list size="small" :data-source="overview?.sources || []">
             <template #renderItem="{ item }">
