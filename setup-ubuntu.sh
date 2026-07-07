@@ -8,6 +8,8 @@ SERVICE_PREFIX="${SERVICE_PREFIX:-discord-mcsm}"
 NODE_MAJOR="${NODE_MAJOR:-20}"
 ASSUME_YES=0
 MODE=""
+BUILD_ROOT=""
+SOURCE_DIR=""
 
 log() {
   printf '\033[1;32m[OK]\033[0m %s\n' "$*"
@@ -25,6 +27,14 @@ die() {
   printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2
   exit 1
 }
+
+cleanup() {
+  if [[ -n "${BUILD_ROOT}" && -d "${BUILD_ROOT}" ]]; then
+    rm -rf "${BUILD_ROOT}"
+  fi
+}
+
+trap cleanup EXIT
 
 usage() {
   cat <<EOF
@@ -141,7 +151,7 @@ apt_install_base() {
   export DEBIAN_FRONTEND=noninteractive
   info "Installing base packages..."
   apt-get update
-  apt-get install -y ca-certificates curl git wget tar xz-utils build-essential gnupg lsb-release
+  apt-get install -y ca-certificates curl git wget tar xz-utils build-essential gnupg lsb-release rsync
   log "Base packages are ready"
 }
 
@@ -205,29 +215,16 @@ EOF
   log "Docker Engine is ready"
 }
 
-clone_or_update_source() {
-  info "Preparing source at ${INSTALL_DIR}..."
-  mkdir -p "$(dirname "${INSTALL_DIR}")"
-
-  if [[ -e "${INSTALL_DIR}" ]] && [[ ! -d "${INSTALL_DIR}" ]]; then
+fetch_source() {
+  info "Fetching clean source from ${REPO_URL} (${REPO_BRANCH})..."
+  if [[ -e "${INSTALL_DIR}" && ! -d "${INSTALL_DIR}" ]]; then
     die "${INSTALL_DIR} exists but is not a directory."
   fi
 
-  if [[ -d "${INSTALL_DIR}/.git" ]]; then
-    git config --global --add safe.directory "${INSTALL_DIR}" >/dev/null 2>&1 || true
-    if [[ -n "$(git -C "${INSTALL_DIR}" status --porcelain)" ]]; then
-      die "${INSTALL_DIR} has uncommitted changes. Commit/stash them or use another INSTALL_DIR."
-    fi
-    git -C "${INSTALL_DIR}" fetch origin "${REPO_BRANCH}"
-    git -C "${INSTALL_DIR}" checkout -B "${REPO_BRANCH}" FETCH_HEAD
-  else
-    if [[ -e "${INSTALL_DIR}" ]] && [[ -n "$(find "${INSTALL_DIR}" -mindepth 1 -maxdepth 1 2>/dev/null)" ]]; then
-      die "${INSTALL_DIR} exists and is not empty. Use another INSTALL_DIR or clean it first."
-    fi
-    git clone -b "${REPO_BRANCH}" "${REPO_URL}" "${INSTALL_DIR}"
-  fi
-
-  log "Source is ready: ${REPO_URL} (${REPO_BRANCH})"
+  BUILD_ROOT="$(mktemp -d /tmp/discord-mcsm-build.XXXXXX)"
+  SOURCE_DIR="${BUILD_ROOT}/source"
+  git clone --depth 1 -b "${REPO_BRANCH}" "${REPO_URL}" "${SOURCE_DIR}"
+  log "Source is ready in ${SOURCE_DIR}"
 }
 
 stop_existing_services() {
@@ -237,11 +234,28 @@ stop_existing_services() {
 
 build_project() {
   info "Building production files. This can take several minutes..."
-  cd "${INSTALL_DIR}"
+  cd "${SOURCE_DIR}"
   chmod +x install-dependents.sh build.sh
   ./install-dependents.sh
   ./build.sh
   log "Production build completed"
+}
+
+deploy_production() {
+  local target="${INSTALL_DIR}/production-code"
+  info "Deploying production files to ${target}..."
+  mkdir -p "${target}"
+
+  rsync -a --delete \
+    --exclude '/daemon/data/' \
+    --exclude '/daemon/logs/' \
+    --exclude '/web/data/' \
+    --exclude '/web/logs/' \
+    --exclude '/web/public/upload_files/' \
+    "${SOURCE_DIR}/production-code/" \
+    "${target}/"
+
+  log "Production files deployed"
 }
 
 linux_helper_arch() {
@@ -459,9 +473,10 @@ main() {
   apt_install_base
   install_nodejs
   install_docker
-  clone_or_update_source
-  stop_existing_services
+  fetch_source
   build_project
+  stop_existing_services
+  deploy_production
   install_daemon_helpers
   prepare_runtime_dirs
   write_daemon_service

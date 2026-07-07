@@ -89,6 +89,11 @@ installs Node.js, Docker Engine, project dependencies, Daemon helper binaries,
 production files, systemd services and basic firewall rules when UFW is already
 active.
 
+The script builds from a clean temporary clone on every run, then deploys the
+compiled files into `/opt/discord-mcsm/production-code`. Existing runtime data,
+logs and uploaded files are preserved, so it can be rerun after an interrupted
+installation or during upgrades.
+
 Interactive mode:
 
 ```bash
