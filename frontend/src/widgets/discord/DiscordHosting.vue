@@ -50,8 +50,9 @@ const createForm = ref({
   createMethod: QUICKSTART_METHOD.DOCKER,
   daemonId: ""
 });
+const selectedPresetConfig = ref<InstancePresetConfig>();
 
-const discordPresetConfig: InstancePresetConfig = {
+const nodeDiscordPresetConfig: InstancePresetConfig = {
   nickname: "discord-bot",
   type: "universal",
   processType: "docker",
@@ -76,16 +77,54 @@ const discordPresetConfig: InstancePresetConfig = {
   }
 };
 
+const pythonDiscordPresetConfig: InstancePresetConfig = {
+  nickname: "discord-python-bot",
+  type: "universal",
+  processType: "docker",
+  cwd: ".",
+  startCommand: "pip install -r requirements.txt && python bot.py",
+  stopCommand: "^c",
+  updateCommand: "pip install -r requirements.txt",
+  tag: ["discord-bot", "python"],
+  eventTask: {
+    autoStart: false,
+    autoRestart: true,
+    autoRestartMaxTimes: 5
+  },
+  docker: {
+    image: "python:3.12-slim",
+    workingDir: "/workspace",
+    changeWorkdir: true,
+    memory: 512,
+    networkMode: "bridge",
+    env: ["DISCORD_TOKEN=${DISCORD_TOKEN}"],
+    labels: ["mcsmanager.workload=discord-bot", "mcsmanager.runtime=python"]
+  }
+};
+
 const quickCreateActions = [
   {
-    key: QUICKSTART_METHOD.DOCKER,
+    key: "nodejs-docker",
+    createMethod: QUICKSTART_METHOD.DOCKER,
+    presetConfig: nodeDiscordPresetConfig,
     icon: CodeOutlined,
     title: t("TXT_CODE_DISCORD_CREATE_DOCKER"),
     detail: t("TXT_CODE_DISCORD_CREATE_DOCKER_DETAIL"),
     type: "primary" as const
   },
   {
-    key: QUICKSTART_METHOD.IMPORT,
+    key: "python-docker",
+    createMethod: QUICKSTART_METHOD.DOCKER,
+    presetConfig: pythonDiscordPresetConfig,
+    icon: CodeOutlined,
+    title: t("TXT_CODE_DISCORD_CREATE_PYTHON_DOCKER"),
+    detail: t("TXT_CODE_DISCORD_CREATE_PYTHON_DOCKER_DETAIL"),
+    type: "default" as const
+  },
+  {
+    key: "import-project",
+    createMethod: QUICKSTART_METHOD.IMPORT,
+    presetConfig: nodeDiscordPresetConfig,
     icon: FileZipOutlined,
     title: t("TXT_CODE_DISCORD_IMPORT_PROJECT"),
     detail: t("TXT_CODE_DISCORD_IMPORT_PROJECT_DETAIL"),
@@ -117,7 +156,10 @@ const loadOverview = async () => {
   overview.value = state.value;
 };
 
-const openCreateForm = async (createMethod: QUICKSTART_METHOD) => {
+const openCreateForm = async (
+  createMethod: QUICKSTART_METHOD,
+  presetConfig: InstancePresetConfig = nodeDiscordPresetConfig
+) => {
   try {
     const selectedNode = await openNodeSelectDialog();
     if (!selectedNode) return;
@@ -125,6 +167,7 @@ const openCreateForm = async (createMethod: QUICKSTART_METHOD) => {
       createMethod,
       daemonId: selectedNode.uuid
     };
+    selectedPresetConfig.value = presetConfig;
     showCreateForm.value = true;
   } catch (error) {
     console.error(error);
@@ -208,7 +251,10 @@ onMounted(() => {
               <ReloadOutlined />
               {{ t("TXT_CODE_DISCORD_REFRESH") }}
             </a-button>
-            <a-button type="primary" @click="openCreateForm(QUICKSTART_METHOD.DOCKER)">
+            <a-button
+              type="primary"
+              @click="openCreateForm(QUICKSTART_METHOD.DOCKER, nodeDiscordPresetConfig)"
+            >
               <PlusOutlined />
               {{ t("TXT_CODE_DISCORD_CREATE_SERVER") }}
             </a-button>
@@ -242,7 +288,7 @@ onMounted(() => {
               :type="action.type"
               block
               class="quick-action"
-              @click="openCreateForm(action.key)"
+              @click="openCreateForm(action.createMethod, action.presetConfig)"
             >
               <component :is="action.icon" />
               <span class="quick-action-copy">
@@ -417,7 +463,7 @@ onMounted(() => {
       <CreateInstanceForm
         :create-method="createForm.createMethod"
         :daemon-id="createForm.daemonId"
-        :preset-config="discordPresetConfig"
+        :preset-config="selectedPresetConfig"
         @next-step="handleCreated"
       />
     </a-modal>
