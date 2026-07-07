@@ -2,6 +2,7 @@ import { t } from "@/lang/i18n";
 import { getRandomId } from "@/tools/randId";
 import type { LayoutCard } from "@/types";
 import DefaultCard from "@/widgets/DefaultCard.vue";
+import DiscordHosting from "@/widgets/discord/DiscordHosting.vue";
 import EmptyCard from "@/widgets/EmptyCard.vue";
 import ImageManager from "@/widgets/imageManager/index.vue";
 import NewImage from "@/widgets/imageManager/NewImage.vue";
@@ -89,6 +90,7 @@ export const LAYOUT_CARD_TYPES: { [key: string]: any } = {
   Schedule,
   InstanceShortcut,
   DefaultCard,
+  DiscordHosting,
   Carousel,
   PluginCard,
   MusicCard,
@@ -528,6 +530,17 @@ export function getLayoutCardPool() {
       description: t("TXT_CODE_163e2d0a"),
       height: LayoutCardHeight.MEDIUM,
       category: NEW_CARD_TYPE.COMMON
+    },
+    {
+      id: getRandomId(),
+      permission: ROLE.ADMIN,
+      meta: {},
+      type: "DiscordHosting",
+      title: "Discord Bot Hosting",
+      width: 12,
+      description: "Policy-first Discord bot hosting control plane",
+      height: LayoutCardHeight.AUTO,
+      category: NEW_CARD_TYPE.OTHER
     },
     {
       id: getRandomId(),

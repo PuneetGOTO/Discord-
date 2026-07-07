@@ -7,6 +7,7 @@ import {
 import { useAppConfigStore } from "@/stores/useAppConfigStore";
 import {
   ApartmentOutlined,
+  ApiOutlined,
   AppstoreOutlined,
   AreaChartOutlined,
   LinkOutlined,
@@ -36,6 +37,7 @@ const isRouteActive = (path: string): boolean => {
 /** Sidebar icon for each route path */
 const routePathIcons: Record<string, Component> = {
   "/instances": AppstoreOutlined,
+  "/discord": ApiOutlined,
   "/market": ShopOutlined,
   "/overview": AreaChartOutlined,
   "/users": TeamOutlined,

@@ -7,6 +7,7 @@ import "./service/user_statistics";
 import "./service/visual_data";
 
 import serviceRouter from "./routers/daemon_router";
+import discordHostingRouter from "./routers/discord_hosting_router";
 import environmentRouter from "./routers/environment_router";
 import filemanager_router from "./routers/filemananger_router";
 import lowUserRouter from "./routers/general_user_router";
@@ -29,6 +30,7 @@ export function mountRouters(app: Koa<Koa.DefaultState, Koa.DefaultContext>) {
   apiRouter.use(userInstanceRouter.routes()).use(userInstanceRouter.allowedMethods());
   apiRouter.use(instanceRouter.routes()).use(instanceRouter.allowedMethods());
   apiRouter.use(serviceRouter.routes()).use(serviceRouter.allowedMethods());
+  apiRouter.use(discordHostingRouter.routes()).use(discordHostingRouter.allowedMethods());
   apiRouter.use(filemanager_router.routes()).use(filemanager_router.allowedMethods());
   apiRouter.use(businessUserRouter.routes()).use(businessUserRouter.allowedMethods());
   apiRouter.use(loginRouter.routes()).use(loginRouter.allowedMethods());

@@ -210,6 +210,28 @@ function getDefaultFrontendLayoutConfig(): IPageLayoutConfig[] {
       ]
     },
     {
+      page: "/discord",
+      items: [
+        {
+          id: getRandomId(),
+          meta: {},
+          type: "DiscordHosting",
+          title: "Discord Bot Hosting",
+          width: 12,
+          height: LayoutCardHeight.AUTO,
+          disableDelete: true
+        },
+        {
+          id: getRandomId(),
+          meta: {},
+          type: "EmptyCard",
+          title: "",
+          width: 12,
+          height: LayoutCardHeight.MINI
+        }
+      ]
+    },
+    {
       page: "/instances",
       items: [
         {
