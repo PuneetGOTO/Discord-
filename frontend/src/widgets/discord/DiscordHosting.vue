@@ -157,6 +157,12 @@ const statusColor = (status: string) => {
   return "default";
 };
 
+const displayText = (value?: string | number) => {
+  if (typeof value !== "string") return value ?? "";
+  if (value.startsWith("TXT_CODE_")) return t(value);
+  return value;
+};
+
 const featureRowKey = (record: DiscordHostingFeature) => record.key;
 const checkRowKey = (record: DiscordPreflightCheck) => `${record.status}-${record.title}`;
 
@@ -201,7 +207,7 @@ onMounted(() => {
           <template #left>
             <a-typography-title class="mb-0" :level="4">
               <ApiOutlined />
-              {{ card.title }}
+              {{ displayText(card.title) }}
             </a-typography-title>
           </template>
           <template #right>
@@ -228,11 +234,11 @@ onMounted(() => {
 
       <a-col v-for="metric in overview?.metrics || []" :key="metric.label" :span="24" :md="6">
         <section class="metric-panel">
-          <a-statistic :title="metric.label" :value="metric.value" />
+          <a-statistic :title="displayText(metric.label)" :value="displayText(metric.value)" />
           <a-tag class="mt-8" :color="statusColor(metric.status)">
             {{ statusText(metric.status) }}
           </a-tag>
-          <p>{{ metric.detail }}</p>
+          <p>{{ displayText(metric.detail) }}</p>
         </section>
       </a-col>
 
@@ -247,7 +253,7 @@ onMounted(() => {
               v-for="item in overview?.architecture || []"
               :key="item"
               status="finish"
-              :title="item"
+              :title="displayText(item)"
             />
           </a-steps>
         </section>
@@ -266,7 +272,7 @@ onMounted(() => {
             <template #renderItem="{ item }">
               <a-list-item>
                 <CheckCircleOutlined class="gate-icon" />
-                {{ item }}
+                {{ displayText(item) }}
               </a-list-item>
             </template>
           </a-list>
@@ -295,6 +301,12 @@ onMounted(() => {
               <template v-else-if="column.key === 'owner'">
                 <a-tag>{{ ownerText(record.owner) }}</a-tag>
               </template>
+              <template v-else-if="column.key === 'title'">
+                {{ displayText(record.title) }}
+              </template>
+              <template v-else-if="column.key === 'detail'">
+                {{ displayText(record.detail) }}
+              </template>
             </template>
           </a-table>
         </section>
@@ -312,7 +324,22 @@ onMounted(() => {
             :pagination="false"
             row-key="control"
             size="small"
-          />
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'layer'">
+                {{ displayText(record.layer) }}
+              </template>
+              <template v-else-if="column.key === 'control'">
+                {{ displayText(record.control) }}
+              </template>
+              <template v-else-if="column.key === 'enforcement'">
+                {{ displayText(record.enforcement) }}
+              </template>
+              <template v-else-if="column.key === 'failureAction'">
+                {{ displayText(record.failureAction) }}
+              </template>
+            </template>
+          </a-table>
         </section>
       </a-col>
 
@@ -475,7 +502,7 @@ onMounted(() => {
               <div class="risk-copy">
                 <a-tag :color="riskMeta.color">{{ riskMeta.title }}</a-tag>
                 <strong>{{ t("TXT_CODE_DISCORD_SCORE", { score: preflight.score }) }}</strong>
-                <span>{{ preflight.summary }}</span>
+                <span>{{ displayText(preflight.summary) }}</span>
               </div>
               <a-progress
                 type="circle"
@@ -497,6 +524,15 @@ onMounted(() => {
                   <a-tag :color="statusColor(record.status)">
                     {{ checkTagText(record.status) }}
                   </a-tag>
+                </template>
+                <template v-else-if="column.key === 'title'">
+                  {{ displayText(record.title) }}
+                </template>
+                <template v-else-if="column.key === 'detail'">
+                  {{ displayText(record.detail) }}
+                </template>
+                <template v-else-if="column.key === 'remediation'">
+                  {{ displayText(record.remediation) }}
                 </template>
               </template>
             </a-table>
@@ -527,7 +563,9 @@ onMounted(() => {
           <a-list size="small" :data-source="overview?.sources || []">
             <template #renderItem="{ item }">
               <a-list-item>
-                <a :href="item.url" target="_blank" rel="noreferrer">{{ item.title }}</a>
+                <a :href="item.url" target="_blank" rel="noreferrer">
+                  {{ displayText(item.title) }}
+                </a>
               </a-list-item>
             </template>
           </a-list>
