@@ -307,8 +307,15 @@ After logging in as an administrator:
 5. Store the bot token as the `DISCORD_TOKEN` environment variable. Do not put
    the token in source files or uploaded archives.
 
-The Node.js preset expects a project with `package.json` and `npm start`. The
-Python preset expects `requirements.txt` and `bot.py`, and starts with:
+The Node.js preset expects a project with `package.json` and `npm start`. It
+loads `.env`, installs dependencies only when `node_modules` is missing, and
+uses `npm ci --omit=dev` when `package-lock.json` exists:
+
+```bash
+sh -lc "set -a; [ -f .env ] && . ./.env; set +a; if [ ! -d node_modules ]; then if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi; fi; npm start"
+```
+
+The Python preset expects `requirements.txt` and `bot.py`, and starts with:
 
 ```bash
 sh -lc "set -a; [ -f .env ] && . ./.env; set +a; [ -d .venv ] || python -m venv .venv; . .venv/bin/activate; if [ -f requirements.txt ]; then python -m pip install --disable-pip-version-check --root-user-action=ignore -r requirements.txt; fi; python ${PYTHON_BOT_ENTRY:-bot.py}"

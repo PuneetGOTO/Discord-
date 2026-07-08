@@ -3459,7 +3459,7 @@
   "TXT_CODE_DISCORD_QUICK_CREATE_TITLE": "Quick create",
   "TXT_CODE_DISCORD_QUICK_CREATE_DESC": "Select a node to open the existing server creation form with a Discord Bot Node.js or Python Docker preset. Admins can create the instance directly, then assign it to a user.",
   "TXT_CODE_DISCORD_CREATE_DOCKER": "Create Node.js container",
-  "TXT_CODE_DISCORD_CREATE_DOCKER_DETAIL": "Best for new bot projects; loads .env, installs node_modules once, then runs npm start.",
+  "TXT_CODE_DISCORD_CREATE_DOCKER_DETAIL": "Best for Node.js bots; loads .env, uses npm ci when package-lock.json exists, and only installs node_modules when missing.",
   "TXT_CODE_DISCORD_CREATE_PYTHON_DOCKER": "Create Python container",
   "TXT_CODE_DISCORD_CREATE_PYTHON_DOCKER_DETAIL": "Best for discord.py, py-cord and similar projects; loads .env, keeps dependencies in .venv, then runs bot.py.",
   "TXT_CODE_DISCORD_IMPORT_PROJECT": "Import ZIP project",

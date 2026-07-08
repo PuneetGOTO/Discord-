@@ -51,6 +51,9 @@ const createForm = ref({
   daemonId: ""
 });
 const selectedPresetConfig = ref<InstancePresetConfig>();
+const loadDotenvCommand = "set -a; [ -f .env ] && . ./.env; set +a";
+const nodeInstallCommand =
+  "if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi";
 
 const nodeDiscordPresetConfig: InstancePresetConfig = {
   nickname: "discord-bot",
@@ -58,10 +61,9 @@ const nodeDiscordPresetConfig: InstancePresetConfig = {
   processType: "docker",
   cwd: ".",
   startCommand:
-    'sh -lc "set -a; [ -f .env ] && . ./.env; set +a; if [ ! -d node_modules ]; then npm install --omit=dev; fi; npm start"',
+    `sh -lc "${loadDotenvCommand}; if [ ! -d node_modules ]; then ${nodeInstallCommand}; fi; npm start"`,
   stopCommand: "^c",
-  updateCommand:
-    'sh -lc "set -a; [ -f .env ] && . ./.env; set +a; npm install --omit=dev"',
+  updateCommand: `sh -lc "${loadDotenvCommand}; ${nodeInstallCommand}"`,
   tag: ["discord-bot"],
   eventTask: {
     autoStart: false,

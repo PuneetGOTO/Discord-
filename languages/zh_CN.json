@@ -3459,7 +3459,7 @@
   "TXT_CODE_DISCORD_QUICK_CREATE_TITLE": "快速创建",
   "TXT_CODE_DISCORD_QUICK_CREATE_DESC": "选择节点后会打开现有创建服务器表单，并自动填入 Discord Bot 常用的 Node.js 或 Python Docker 配置。管理员可以直接创建，再把实例分配给用户。",
   "TXT_CODE_DISCORD_CREATE_DOCKER": "创建 Node.js 容器",
-  "TXT_CODE_DISCORD_CREATE_DOCKER_DETAIL": "适合新 Bot 项目，会载入 .env，首次安装 node_modules，然后执行 npm start。",
+  "TXT_CODE_DISCORD_CREATE_DOCKER_DETAIL": "适合 Node.js Bot，会载入 .env，有 package-lock.json 时使用 npm ci，并只在缺少 node_modules 时安装。",
   "TXT_CODE_DISCORD_CREATE_PYTHON_DOCKER": "创建 Python 容器",
   "TXT_CODE_DISCORD_CREATE_PYTHON_DOCKER_DETAIL": "适合 discord.py、py-cord 等项目，会载入 .env，把依赖保存在 .venv，然后执行 bot.py。",
   "TXT_CODE_DISCORD_IMPORT_PROJECT": "导入 ZIP 项目",
