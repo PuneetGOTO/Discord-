@@ -6,6 +6,10 @@ REPO_BRANCH="${REPO_BRANCH:-codex/discord-hosting-platform}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/discord-mcsm}"
 SERVICE_PREFIX="${SERVICE_PREFIX:-discord-mcsm}"
 NODE_MAJOR="${NODE_MAJOR:-20}"
+DOMAIN="${DOMAIN:-}"
+DOMAIN_EMAIL="${DOMAIN_EMAIL:-}"
+DOMAIN_SSL=1
+DOMAIN_SSL_ISSUED=0
 ASSUME_YES=0
 MODE=""
 BUILD_ROOT=""
@@ -52,6 +56,9 @@ Options:
   --install-dir PATH  Install directory, default: ${INSTALL_DIR}
   --branch NAME       Git branch, default: ${REPO_BRANCH}
   --repo URL          Git repository, default: ${REPO_URL}
+  --domain DOMAIN     Configure Nginx reverse proxy for the main platform
+  --email EMAIL       Email for Let's Encrypt certificate notices
+  --no-ssl            Configure domain over HTTP only, skip Let's Encrypt
   -h, --help          Show this help
 
 Environment overrides:
@@ -60,6 +67,8 @@ Environment overrides:
   REPO_BRANCH=codex/discord-hosting-platform
   SERVICE_PREFIX=discord-mcsm
   NODE_MAJOR=20
+  DOMAIN=panel.example.com
+  DOMAIN_EMAIL=admin@example.com
 EOF
 }
 
@@ -92,6 +101,20 @@ parse_args() {
         REPO_URL="${2:-}"
         [[ -n "${REPO_URL}" ]] || die "--repo requires a URL"
         shift 2
+        ;;
+      --domain)
+        DOMAIN="${2:-}"
+        [[ -n "${DOMAIN}" ]] || die "--domain requires a value"
+        shift 2
+        ;;
+      --email)
+        DOMAIN_EMAIL="${2:-}"
+        [[ -n "${DOMAIN_EMAIL}" ]] || die "--email requires a value"
+        shift 2
+        ;;
+      --no-ssl)
+        DOMAIN_SSL=0
+        shift
         ;;
       -h|--help)
         usage
@@ -140,6 +163,66 @@ EOF
     1) MODE="main" ;;
     2) MODE="node" ;;
     *) die "Invalid selection: ${choice}" ;;
+  esac
+}
+
+normalize_domain() {
+  local value="$1"
+  value="${value#http://}"
+  value="${value#https://}"
+  value="${value%%/*}"
+  value="${value%%:*}"
+  value="$(printf '%s' "${value}" | tr '[:upper:]' '[:lower:]')"
+  printf '%s' "${value}"
+}
+
+validate_domain() {
+  local value="$1"
+  [[ -n "${value}" ]] || return 1
+  [[ "${value}" =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$ ]]
+}
+
+choose_domain() {
+  [[ "${MODE}" == "main" ]] || return 0
+
+  if [[ -n "${DOMAIN}" ]]; then
+    DOMAIN="$(normalize_domain "${DOMAIN}")"
+    validate_domain "${DOMAIN}" || die "Invalid domain: ${DOMAIN}"
+    return 0
+  fi
+
+  local existing_domain=""
+  if [[ -f "/etc/nginx/sites-available/${SERVICE_PREFIX}.conf" ]]; then
+    existing_domain="$(awk '/server_name/ {print $2; exit}' "/etc/nginx/sites-available/${SERVICE_PREFIX}.conf" | tr -d ';' || true)"
+    existing_domain="$(normalize_domain "${existing_domain}")"
+    if validate_domain "${existing_domain}"; then
+      DOMAIN="${existing_domain}"
+      info "Detected existing domain: ${DOMAIN}"
+      return 0
+    fi
+  fi
+
+  if [[ "${ASSUME_YES}" -eq 1 ]]; then
+    return 0
+  fi
+
+  local answer
+  read -r -p "是否配置域名和 Nginx 反向代理？Configure domain? [y/N]: " answer
+  case "${answer}" in
+    y|Y|yes|YES)
+      read -r -p "请输入域名，例如 panel.example.com: " DOMAIN
+      DOMAIN="$(normalize_domain "${DOMAIN}")"
+      validate_domain "${DOMAIN}" || die "Invalid domain: ${DOMAIN}"
+      read -r -p "Let's Encrypt 邮箱，可留空: " DOMAIN_EMAIL
+      read -r -p "是否自动申请 HTTPS 证书？Enable HTTPS? [Y/n]: " answer
+      case "${answer}" in
+        n|N|no|NO) DOMAIN_SSL=0 ;;
+        *) DOMAIN_SSL=1 ;;
+      esac
+      ;;
+    *)
+      DOMAIN=""
+      ;;
   esac
 }
 
@@ -344,6 +427,97 @@ EOF
   log "Wrote ${SERVICE_PREFIX}-web.service"
 }
 
+configure_panel_reverse_proxy() {
+  [[ "${MODE}" == "main" && -n "${DOMAIN}" ]] || return 0
+
+  local config_file="${INSTALL_DIR}/production-code/web/data/SystemConfig/config.json"
+  mkdir -p "$(dirname "${config_file}")"
+  PANEL_CONFIG_FILE="${config_file}" node <<'NODE'
+const fs = require("fs");
+const file = process.env.PANEL_CONFIG_FILE;
+let config = {};
+if (fs.existsSync(file)) {
+  try {
+    config = JSON.parse(fs.readFileSync(file, "utf8"));
+  } catch (error) {
+    throw new Error(`Failed to parse ${file}: ${error.message}`);
+  }
+}
+config.httpIp = "127.0.0.1";
+config.httpPort = Number(config.httpPort || 23333);
+config.reverseProxyMode = true;
+config.reverseProxyHeader = "X-Real-IP";
+fs.writeFileSync(file, JSON.stringify(config, null, 4));
+NODE
+  log "Panel reverse proxy mode is enabled"
+}
+
+configure_domain_proxy() {
+  [[ "${MODE}" == "main" && -n "${DOMAIN}" ]] || return 0
+
+  info "Configuring domain ${DOMAIN} with Nginx..."
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get install -y nginx certbot python3-certbot-nginx
+
+  cat > "/etc/nginx/conf.d/${SERVICE_PREFIX}-websocket.conf" <<'EOF'
+map $http_upgrade $discord_mcsm_connection_upgrade {
+    default upgrade;
+    '' close;
+}
+EOF
+
+  cat > "/etc/nginx/sites-available/${SERVICE_PREFIX}.conf" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+
+    client_max_body_size 1024m;
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 3600s;
+    proxy_read_timeout 3600s;
+
+    location / {
+        proxy_pass http://127.0.0.1:23333;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$discord_mcsm_connection_upgrade;
+        proxy_buffering off;
+    }
+}
+EOF
+
+  ln -sf "/etc/nginx/sites-available/${SERVICE_PREFIX}.conf" "/etc/nginx/sites-enabled/${SERVICE_PREFIX}.conf"
+  rm -f /etc/nginx/sites-enabled/default
+  nginx -t
+  systemctl enable --now nginx
+  systemctl reload nginx
+  log "Nginx reverse proxy is ready for http://${DOMAIN}/"
+
+  if [[ "${DOMAIN_SSL}" -eq 1 ]]; then
+    info "Requesting Let's Encrypt certificate for ${DOMAIN}..."
+    local certbot_args=(--nginx -d "${DOMAIN}" --redirect --non-interactive --agree-tos)
+    if [[ -n "${DOMAIN_EMAIL}" ]]; then
+      certbot_args+=(--email "${DOMAIN_EMAIL}")
+    else
+      certbot_args+=(--register-unsafely-without-email)
+    fi
+
+    if certbot "${certbot_args[@]}"; then
+      DOMAIN_SSL_ISSUED=1
+      systemctl reload nginx
+      log "HTTPS is ready for https://${DOMAIN}/"
+    else
+      warn "Let's Encrypt certificate request failed. Check DNS A/AAAA records and ports 80/443, then rerun with --domain ${DOMAIN}."
+      warn "HTTP reverse proxy remains available at http://${DOMAIN}/"
+    fi
+  fi
+}
+
 start_services() {
   systemctl daemon-reload
   systemctl enable --now "${SERVICE_PREFIX}-daemon.service"
@@ -376,9 +550,16 @@ configure_ufw_if_active() {
 
   if ufw status 2>/dev/null | grep -qi "Status: active"; then
     if [[ "${MODE}" == "main" ]]; then
-      ufw allow 23333/tcp
-      log "UFW rule added for Web panel port 23333/tcp"
-      warn "Daemon port 24444/tcp was not opened. Keep it private unless you run remote nodes."
+      if [[ -n "${DOMAIN}" ]]; then
+        ufw allow 80/tcp
+        ufw allow 443/tcp
+        log "UFW rules added for domain ports 80/tcp and 443/tcp"
+        warn "Direct Web panel port 23333/tcp and Daemon port 24444/tcp were not opened."
+      else
+        ufw allow 23333/tcp
+        log "UFW rule added for Web panel port 23333/tcp"
+        warn "Daemon port 24444/tcp was not opened. Keep it private unless you run remote nodes."
+      fi
     else
       ufw allow 24444/tcp
       log "UFW rule added for node Daemon port 24444/tcp"
@@ -403,11 +584,21 @@ daemon_key() {
 }
 
 print_summary() {
-  local ip key
+  local ip key open_url
   ip="$(server_ip)"
   key="$(daemon_key)"
   if [[ -z "${key}" ]]; then
     key="check with: journalctl -u ${SERVICE_PREFIX}-daemon -n 80 --no-pager"
+  fi
+
+  if [[ -n "${DOMAIN}" ]]; then
+    if [[ "${DOMAIN_SSL_ISSUED}" -eq 1 ]]; then
+      open_url="https://${DOMAIN}/"
+    else
+      open_url="http://${DOMAIN}/"
+    fi
+  else
+    open_url="http://${ip:-your-server-ip}:23333/"
   fi
 
   cat <<EOF
@@ -427,12 +618,20 @@ EOF
   systemctl status ${SERVICE_PREFIX}-web
 
 Open:
-  http://${ip:-your-server-ip}:23333/
+  ${open_url}
 
 Discord bot hosting:
   Admin panel -> Discord Hosting -> select node -> Create Node.js container or Create Python container
 
 EOF
+    if [[ -n "${DOMAIN}" ]]; then
+      cat <<EOF
+Domain proxy:
+  nginx config: /etc/nginx/sites-available/${SERVICE_PREFIX}.conf
+  nginx logs:   /var/log/nginx/access.log /var/log/nginx/error.log
+
+EOF
+    fi
   else
     cat <<EOF
 
@@ -468,8 +667,10 @@ main() {
   require_root
   require_ubuntu
   choose_mode
+  choose_domain
 
   info "Mode: ${MODE}"
+  [[ -n "${DOMAIN}" ]] && info "Domain: ${DOMAIN}"
   apt_install_base
   install_nodejs
   install_docker
@@ -481,9 +682,11 @@ main() {
   prepare_runtime_dirs
   write_daemon_service
   [[ "${MODE}" == "main" ]] && write_web_service
+  configure_panel_reverse_proxy
   start_services
-  pull_bot_images
   configure_ufw_if_active
+  configure_domain_proxy
+  pull_bot_images
   print_summary
 }
 

@@ -106,6 +106,16 @@ Install the main platform directly:
 curl -fsSL https://github.com/PuneetGOTO/Discord-/raw/refs/heads/codex/discord-hosting-platform/setup-ubuntu.sh | sudo bash -s -- --main
 ```
 
+Install the main platform and configure a domain with Nginx + Let's Encrypt:
+
+```bash
+curl -fsSL https://github.com/PuneetGOTO/Discord-/raw/refs/heads/codex/discord-hosting-platform/setup-ubuntu.sh | sudo bash -s -- --main --domain panel.example.com --email admin@example.com
+```
+
+Before using `--domain`, point the domain's DNS A/AAAA record to this server
+and make sure ports `80/tcp` and `443/tcp` are reachable from the internet. If
+you only want HTTP reverse proxy without HTTPS, add `--no-ssl`.
+
 Install a remote node directly:
 
 ```bash
