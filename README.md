@@ -116,6 +116,11 @@ Before using `--domain`, point the domain's DNS A/AAAA record to this server
 and make sure ports `80/tcp` and `443/tcp` are reachable from the internet. If
 you only want HTTP reverse proxy without HTTPS, add `--no-ssl`.
 
+When a domain is configured, the installer also proxies Daemon browser traffic
+under `/_daemon/<node-id>/` and writes the matching node remote mapping. This
+prevents the node list from showing `Browser direct connection` errors when the
+panel is opened through HTTPS or when port `24444` is not exposed publicly.
+
 Install a remote node directly:
 
 ```bash
