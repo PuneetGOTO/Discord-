@@ -311,8 +311,13 @@ The Node.js preset expects a project with `package.json` and `npm start`. The
 Python preset expects `requirements.txt` and `bot.py`, and starts with:
 
 ```bash
-pip install -r requirements.txt && python bot.py
+sh -lc "set -a; [ -f .env ] && . ./.env; set +a; [ -d .venv ] || python -m venv .venv; . .venv/bin/activate; if [ -f requirements.txt ]; then python -m pip install --disable-pip-version-check --root-user-action=ignore -r requirements.txt; fi; python ${PYTHON_BOT_ENTRY:-bot.py}"
 ```
+
+The presets automatically load a project-level `.env` file before starting the
+bot. Use normal dotenv lines such as `DISCORD_TOKEN=your_token_here`. Do not set
+placeholder container variables like `DISCORD_TOKEN=${DISCORD_TOKEN}`; that
+literal value can override `.env` loading in many bot frameworks.
 
 #### 8. Update this deployment later
 

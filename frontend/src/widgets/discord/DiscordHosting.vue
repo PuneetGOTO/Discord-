@@ -57,9 +57,11 @@ const nodeDiscordPresetConfig: InstancePresetConfig = {
   type: "universal",
   processType: "docker",
   cwd: ".",
-  startCommand: "npm install --omit=dev && npm start",
+  startCommand:
+    'sh -lc "set -a; [ -f .env ] && . ./.env; set +a; if [ ! -d node_modules ]; then npm install --omit=dev; fi; npm start"',
   stopCommand: "^c",
-  updateCommand: "npm install --omit=dev",
+  updateCommand:
+    'sh -lc "set -a; [ -f .env ] && . ./.env; set +a; npm install --omit=dev"',
   tag: ["discord-bot"],
   eventTask: {
     autoStart: false,
@@ -72,7 +74,6 @@ const nodeDiscordPresetConfig: InstancePresetConfig = {
     changeWorkdir: true,
     memory: 512,
     networkMode: "bridge",
-    env: ["DISCORD_TOKEN=${DISCORD_TOKEN}"],
     labels: ["mcsmanager.workload=discord-bot"]
   }
 };
@@ -82,9 +83,11 @@ const pythonDiscordPresetConfig: InstancePresetConfig = {
   type: "universal",
   processType: "docker",
   cwd: ".",
-  startCommand: "pip install -r requirements.txt && python bot.py",
+  startCommand:
+    'sh -lc "set -a; [ -f .env ] && . ./.env; set +a; [ -d .venv ] || python -m venv .venv; . .venv/bin/activate; if [ -f requirements.txt ]; then python -m pip install --disable-pip-version-check --root-user-action=ignore -r requirements.txt; fi; python ${PYTHON_BOT_ENTRY:-bot.py}"',
   stopCommand: "^c",
-  updateCommand: "pip install -r requirements.txt",
+  updateCommand:
+    'sh -lc "set -a; [ -f .env ] && . ./.env; set +a; [ -d .venv ] || python -m venv .venv; . .venv/bin/activate; if [ -f requirements.txt ]; then python -m pip install --disable-pip-version-check --root-user-action=ignore -r requirements.txt; fi"',
   tag: ["discord-bot", "python"],
   eventTask: {
     autoStart: false,
@@ -97,7 +100,6 @@ const pythonDiscordPresetConfig: InstancePresetConfig = {
     changeWorkdir: true,
     memory: 512,
     networkMode: "bridge",
-    env: ["DISCORD_TOKEN=${DISCORD_TOKEN}"],
     labels: ["mcsmanager.workload=discord-bot", "mcsmanager.runtime=python"]
   }
 };
